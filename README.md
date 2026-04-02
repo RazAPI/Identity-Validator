@@ -45,7 +45,6 @@ If no configuration is found, it will be created automatically.
 * `0x7C`
 &#x20; A function used in a test is present but not working correctly.
 * `0x3C`
-
 &#x20; A function required for a test is missing.
 ---
 ### Validator Runtime
