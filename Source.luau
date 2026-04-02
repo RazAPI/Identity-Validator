@@ -91,7 +91,7 @@ local AllDeps = { ["getthreadidentity"] = true, ["setthreadidentity"] = true, ["
 
 for i,v in AllDeps do
     if AgentInfo.Environment[i] == nil then
-        PrintConsole(2, `[ Validator - Assistant ]: One or more dependencies are missing, and the script cannot continue executing.\n\nHere's the error code: 0x1C\nThe dependency: {i}`)\
+        PrintConsole(2, `[ Validator - Assistant ]: One or more dependencies are missing, and the script cannot continue executing.\n\nHere's the error code: 0x1C\nThe dependency: {i}`)
         return
     end
 end
