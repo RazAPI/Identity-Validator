@@ -198,7 +198,7 @@ task.spawn(function()
 			TestDependencies.SendTest(Success, `Failed (game:GetJobsInfo), result: {Result}`)
 
 			--// this is basic instance access
-			TestDependencies.SendTest((pcall(function() Instance.new("Part").Name = "FukUpSomeKommasUpYeah" end)), `Failed to access instance properties? 0x8C`)
+			TestDependencies.SendTest((pcall(function() Instance.new("Part").Name = "Legooo" end)), `Failed to access instance properties? 0x8C`)
 			return "Passed"
 		end)
 	end, "Failed L2")
