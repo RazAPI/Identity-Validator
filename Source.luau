@@ -47,10 +47,8 @@ local AgentInfo = { Name = getexecutorname and getexecutorname() or "Unknown", E
 local TestDependencies = { Passes = 0, Failures = 0, Tested = 0, SendTest = function(Statement, Reason) if not Statement then PrintConsole(3, Reason) end end,
 	CaptureDeps = {
 		GetNumFTex = function(Ignore)
-			local String = "" 
-			string.gsub(Ignore, "%d+", function(Out) String = String .. Out end)
-			return tonumber(String)
-		end
+			return tonumber(string.gsub(Ignore, "%D+", "")) or { ["ErrorCode"] = 0x4C, ["Reason"] = "Failed to extract number" }
+		end   
 	}
 }
 
@@ -101,7 +99,7 @@ end
 TestDependencies.GTDSTService = function(Level, Callback, Reason)
 	local Function = getidentity and getidentity() or getthreadidentity and getthreadidentity()
 
-	if Function() == Level then
+	if Function and Function() == Level then
 		local Success, Result = pcall(Callback)
 		TestDependencies.SendTest(Success, Reason)
 	end
@@ -137,8 +135,7 @@ TestProcess("printidentity - Debug Info Check", function()
 	if not Success then
 		TestDependencies.SendTest(1 > 2, `Unexpected error occured, (error code 0x3C), Here's what we captured: {Result}`)
     else
-        PrintConsole(1, `[ Validator - Debug (printidentity) ]: {#Result > 1 and Result or "No debug name found?"}`)
-        TestDependencies.SendTest(LogLastMsg():find("[ Validator - Debug (printidentity) ]: No debug name found?"), "Did not return a debug name")
+        TestDependencies.SendTest(Result == "printidentity", "Did not return debug name")
     end
 
 	return "Passed"
@@ -156,8 +153,10 @@ TestProcess("printidentity - Validation Check", function()
         TestDependencies.SendTest(Result == "[C]", "Did not return [C] (printidentity is not a C closure)")
 
         printidentity()
+		task.wait(0.2)
+
         TestDependencies.SendTest(LogLastMsg():find("Current identity is"), "Nothing was outputted when calling printidentity")
-		TestDependencies.SendTest(GetNumFTex(LogLastMsg()) <= 8, "Identity must not be higher than 8")
+		TestDependencies.SendTest(TestDependencies.CaptureDeps.GetNumFTex(LogLastMsg()) <= 8, "Identity must not be higher than 8")
     end
 
 	return "Passed"
