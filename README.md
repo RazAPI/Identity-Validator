@@ -2,7 +2,7 @@
 
 Checks and validates the thread identity of your RSU.
 
-**Latest Version:** 2.0.1 (Build 4120269P)
+**Latest Version:** 2.0.1.1 (Build 42202610P)
 
 ---
 
