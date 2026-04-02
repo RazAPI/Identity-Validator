@@ -130,7 +130,6 @@ end)
 
 TestProcess("printidentity - Debug Info Check", function()
 	local Success, Result = pcall(function()
-		--// I'm making sure that i can run debug.info without it erroring
 		return debug.info(printidentity, "n")
 	end)
 
@@ -165,7 +164,7 @@ end)
 
 CalculatedTests["printidentity"] = math.floor((os.clock() - PrintIdentityTimeServer) * 1000)
 
---// getthreadidentity bizz
+--// getthreadidentity
 
 PrintConsole(1, "")
 PrintConsole(1, "[ Validator - Core ]: Testing getthreadidentity")
