@@ -14,7 +14,7 @@ local PrintConsole = function(Option, Message, Repeat)
 end
 
 PrintConsole(1, "")
-PrintConsole(1, "[ Validator - Intro ]: Running IV (Identity Validator)\n[ Validator - Build ]: Build 331202610P")
+PrintConsole(1, "[ Validator - Intro ]: Running IV (Identity Validator) Build 331202610P")
 task.wait(0.3)
 PrintConsole(1, "[ Validator - Intro ]: Starting...")
 
@@ -87,7 +87,7 @@ PrintConsole(1, "[ Validator - Assistant ]: Setup finished")
 
 PrintConsole(1, "[ Validator - Assistant ]: Checking dependencies")
 
-local AllDeps = { "getthreadidentity" = true, "setthreadidentity" = true, "debug.info" = true }
+local AllDeps = { ["getthreadidentity"] = true, ["setthreadidentity"] = true, ["debug.info"] = true }
 
 for i,v in AllDeps do
     if AgentInfo.Environment[i] == nil then
@@ -130,6 +130,7 @@ end)
 
 TestProcess("printidentity - Debug Info Check", function()
 	local Success, Result = pcall(function()
+		--// I'm making sure that i can run debug.info without it erroring
 		return debug.info(printidentity, "n")
 	end)
 
@@ -164,7 +165,7 @@ end)
 
 CalculatedTests["printidentity"] = math.floor((os.clock() - PrintIdentityTimeServer) * 1000)
 
---// getthreadidentity
+--// getthreadidentity bizz
 
 PrintConsole(1, "")
 PrintConsole(1, "[ Validator - Core ]: Testing getthreadidentity")
@@ -198,7 +199,7 @@ task.spawn(function()
 			TestDependencies.SendTest(Success, `Failed (game:GetJobsInfo), result: {Result}`)
 
 			--// this is basic instance access
-			TestDependencies.SendTest((pcall(function() Instance.new("Part").Name = "Legooo" end)), `Failed to access instance properties? 0x8C`)
+			TestDependencies.SendTest((pcall(function() Instance.new("Part").Name = "FukUpSomeKommasUpYeah" end)), `Failed to access instance properties? 0x8C`)
 			return "Passed"
 		end)
 	end, "Failed L2")
