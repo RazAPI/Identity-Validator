@@ -4,7 +4,7 @@
     Author.: lucibedroque \\ RazAPIx64 \\ RazAPI \\ Raz \\ Lucien
 ]]
 
-local PrintConsole = function(Option, Message, Repeat)
+local PrintConsole = function(Option, Message)
 	assert(Option < 4, "No options above 3")
 
 	local Options = {[1] = print, [2] = warn, [3] = error}
