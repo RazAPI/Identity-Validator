@@ -14,7 +14,7 @@ local PrintConsole = function(Option, Message)
 end
 
 PrintConsole(1, "")
-PrintConsole(1, "[ Validator - Intro ]: Running IV (Identity Validator) Build 331202610P")
+PrintConsole(1, "[ Validator - Intro ]: Running IV Build 4302026114P")
 task.wait(0.3)
 PrintConsole(1, "[ Validator - Intro ]: Starting...")
 
