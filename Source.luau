@@ -19,7 +19,6 @@ task.wait(0.3)
 PrintConsole(1, "[ Validator - Intro ]: Starting...")
 
 --// Dependencies
-local LastMessage
 local ProcessSearch = function(ProcessClosure)
 	local Env = getgenv and getgenv() or getfenv(0)
 
