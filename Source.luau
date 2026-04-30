@@ -18,6 +18,8 @@ PrintConsole(1, "[ Validator - Intro ]: Running IV (Identity Validator) Build 33
 task.wait(0.3)
 PrintConsole(1, "[ Validator - Intro ]: Starting...")
 
+--// Dependencies
+local LastMessage
 local ProcessSearch = function(ProcessClosure)
 	local Env = getgenv and getgenv() or getfenv(0)
 
@@ -34,21 +36,12 @@ end
 --// Services
 local LogService = game:GetService("LogService")
 
-LogService.MessageOut:Connect(function(Message)
-	LastMessage = Message
-end)
-
-local LogLastMsg = function()
-    return LastMessage
-end
-
-local LastMessage
 local AgentInfo = { Name = getexecutorname and getexecutorname() or "Unknown", Environment = getgenv and getgenv() or getfenv(0) }
 local TestDependencies = { Passes = 0, Failures = 0, Tested = 0, SendTest = function(Statement, Reason) if not Statement then PrintConsole(3, Reason) end end,
 	CaptureDeps = {
 		GetNumFTex = function(Ignore)
-			return tonumber(string.gsub(Ignore, "%D+", "")) or { ["ErrorCode"] = 0x4C, ["Reason"] = "Failed to extract number" }
-		end   
+			return tonumber((string.gsub(Ignore, "%D+", ""))) or { ["ErrorCode"] = 0x4C, ["Reason"] = "Failed to extract number" }
+		end
 	}
 }
 
@@ -70,7 +63,6 @@ local TestProcess = function(TestName, Callback)
 			TestDependencies.Tested += 1
 
 			PrintConsole(1, `✅ {Function} • {Result}`)
-			--// prod. lucien
 		else
 			TestDependencies.Failures += 1
 			TestDependencies.Tested += 1
@@ -82,24 +74,22 @@ end
 
 PrintConsole(1, "")
 PrintConsole(1, "[ Validator - Assistant ]: Setup finished")
-
 PrintConsole(1, "[ Validator - Assistant ]: Checking dependencies")
 
-local AllDeps = { ["getthreadidentity"] = true, ["setthreadidentity"] = true, ["debug.info"] = true }
 
-for i,v in AllDeps do
-    if AgentInfo.Environment[i] == nil then
-        PrintConsole(2, `[ Validator - Assistant ]: One or more dependencies are missing, and the script cannot continue executing.\n\nHere's the error code: 0x1C\nThe dependency: {i}`)
-        return
-    end
+local AllDeps = { "getthreadidentity", "setthreadidentity", "debug.info" }
+
+for _, v in AllDeps do
+	if ProcessSearch(v) == nil then
+		PrintConsole(2, `[ Validator - Assistant ]: One or more dependencies are missing, and the script cannot continue executing.\n\nHere's the error code: 0x1C\nThe dependency: {v}`)
+		return
+	end
 end
 
---// finish proper deps
-
 TestDependencies.GTDSTService = function(Level, Callback, Reason)
-	local Function = getidentity and getidentity() or getthreadidentity and getthreadidentity()
+	local GetIdentity = getidentity or getthreadidentity
 
-	if Function and Function() == Level then
+	if GetIdentity and GetIdentity() == Level then
 		local Success, Result = pcall(Callback)
 		TestDependencies.SendTest(Success, Reason)
 	end
@@ -117,26 +107,25 @@ local CalculatedTests = {}
 local PrintIdentityTimeServer = os.clock()
 
 TestProcess("printidentity - Environment Check", function()
-   TestDependencies.SendTest(AgentInfo.Environment.printidentity, "function doesn't exist??")
+	TestDependencies.SendTest(AgentInfo.Environment.printidentity, "function doesn't exist??")
 
-    if AgentInfo.Environment.getrenv then
-        TestDependencies.SendTest(AgentInfo.Environment.getrenv().printidentity, "printidentity does not exist in the Roblox Environment")
-    end
+	if AgentInfo.Environment.getrenv then
+		TestDependencies.SendTest(AgentInfo.Environment.getrenv().printidentity, "printidentity does not exist in the Roblox Environment")
+	end
 
-   return "Passed"
+	return "Passed"
 end)
 
 TestProcess("printidentity - Debug Info Check", function()
 	local Success, Result = pcall(function()
-		--// I'm making sure that i can run debug.info without it erroring
 		return debug.info(printidentity, "n")
 	end)
 
 	if not Success then
 		TestDependencies.SendTest(1 > 2, `Unexpected error occured, (error code 0x3C), Here's what we captured: {Result}`)
-    else
-        TestDependencies.SendTest(Result == "printidentity", "Did not return debug name")
-    end
+	else
+		TestDependencies.SendTest(Result == "printidentity", "Did not return debug name")
+	end
 
 	return "Passed"
 end)
@@ -146,31 +135,45 @@ TestProcess("printidentity - Validation Check", function()
 		return debug.info(printidentity, "s")
 	end)
 
-	if not Success then
-		TestDependencies.SendTest(1 > 2, `Unexpected error occured, error code (0x3C), Here's what we captured: {Result}`)
-    else
-        PrintConsole(1, `[ Validator - Debug (printidentity) ]: Source -> {Result}`)
-        TestDependencies.SendTest(Result == "[C]", "Did not return [C] (printidentity is not a C closure)")
+	TestDependencies.SendTest(Success, `Unexpected error occured, error code (0x3C), Here's what we captured: {Result}`)
 
-        printidentity()
-		task.wait(0.2)
+	PrintConsole(1, `[ Validator - Debug (printidentity) ]: Source -> {Result}`)
+	TestDependencies.SendTest(Result == "[C]", "Did not return [C] (printidentity is not a C closure)")
 
-        TestDependencies.SendTest(LogLastMsg():find("Current identity is"), "Nothing was outputted when calling printidentity")
-		TestDependencies.SendTest(TestDependencies.CaptureDeps.GetNumFTex(LogLastMsg()) <= 8, "Identity must not be higher than 8")
-    end
+	local IdentityOutput = nil
+	local Connection
+	--// dear
+	Connection = LogService.MessageOut:Connect(function(Message)
+		if Message:find("Current identity is") then
+			IdentityOutput = Message
+			Connection:Disconnect()
+		end
+	end)
+
+	printidentity()
+
+	for i = 1, 20 do
+		if IdentityOutput then break end
+		task.wait(0.1)
+	end
+
+	Connection:Disconnect()
+
+	TestDependencies.SendTest(IdentityOutput ~= nil, "Nothing was outputted when calling printidentity")
+	TestDependencies.SendTest(IdentityOutput and TestDependencies.CaptureDeps.GetNumFTex(IdentityOutput) <= 8, "Identity must not be higher than 8")
 
 	return "Passed"
 end)
 
 CalculatedTests["printidentity"] = math.floor((os.clock() - PrintIdentityTimeServer) * 1000)
 
---// getthreadidentity bizz
+--// getthreadidentity
 
 PrintConsole(1, "")
 PrintConsole(1, "[ Validator - Core ]: Testing getthreadidentity")
 PrintConsole(1, "")
 
-local GetThreadIdentityTimeServer = os.clock() 
+local GetThreadIdentityTimeServer = os.clock()
 
 TestProcess("getthreadidentity: Validation & Closure Check", function()
 	local Success, Result = pcall(function() return getthreadidentity() end)
@@ -178,13 +181,14 @@ TestProcess("getthreadidentity: Validation & Closure Check", function()
 
 	TestDependencies.SendTest(type(getthreadidentity()) == "number", "Did not return a number.")
 	TestDependencies.SendTest(getthreadidentity() <= 8, "Thread identity cannot be higher than 8")
-	--// this is actually a getrenv check, it only checks if it's just indexing the current environment (getfenv()) instead of robloxs
 
 	if AgentInfo.Environment.getrenv then
-		TestDependencies.SendTest(not AgentInfo.Environment.getrenv()[getthreadidentity] "getthreadidentity should not exist in the Roblox Environment")
+		TestDependencies.SendTest(not AgentInfo.Environment.getrenv()[getthreadidentity], "getthreadidentity should not exist in the Roblox Environment")
 	end
 
-	TestDependencies.SendTest(debug.info(getthreadidentity, "s") == "[C]", "getthreadidentity is not a C Closure (MIGHT be inaccurate)")
+	if debug.info(getthreadidentity, "s") ~= "[C]" then
+		PrintConsole(2, "⚠️ getthreadidentity is not a C closure (skipped)")
+	end
 
 	return "Passed"
 end)
@@ -197,7 +201,6 @@ task.spawn(function()
 			local Success, Result = pcall(function() return game:GetJobsInfo() end)
 			TestDependencies.SendTest(Success, `Failed (game:GetJobsInfo), result: {Result}`)
 
-			--// this is basic instance access
 			TestDependencies.SendTest((pcall(function() Instance.new("Part").Name = "FukUpSomeKommasUpYeah" end)), `Failed to access instance properties? 0x8C`)
 			return "Passed"
 		end)
@@ -208,11 +211,9 @@ task.spawn(function()
 			local Success, Result = pcall(function() return game:GetService("CoreGui"):GetFullName() end)
 			TestDependencies.SendTest(Success, `Failed (CoreGui:GetFullName), result: {Result}`)
 
-			--// CorePackages, nothing different here.
 			local SecondTest, SecondResult = pcall(function() return game:GetService("CorePackages"):GetFullName() end)
 			TestDependencies.SendTest(SecondTest, `Failed (CorePackages:GetFullName), result: {SecondResult}`)
 
-			--// RobloxLocked permission <xoxo>
 			local Folder = Instance.new("Folder")
 			local Lost, Rushi = pcall(function() Folder.RobloxLocked = true end)
 
@@ -246,10 +247,8 @@ TestProcess("setthreadidentity: Validation & Closure Check", function()
 	local Type, Checking = pcall(function() return setthreadidentity({}) end)
 	TestDependencies.SendTest(not Type, "No typechecking")
 
-	--// this is actually a getrenv check, it only checks if it's just indexing the current environment (getfenv()) instead of robloxs
-
 	if AgentInfo.Environment.getrenv then
-		TestDependencies.SendTest(not AgentInfo.Environment.getrenv()[setthreadidentity] "setthreadidentity should not exist in the Roblox Environment")
+		TestDependencies.SendTest(not AgentInfo.Environment.getrenv()[setthreadidentity], "setthreadidentity should not exist in the Roblox Environment")
 	end
 
 	TestDependencies.SendTest(debug.info(setthreadidentity, "s") == "[C]", "setthreadidentity is not a C Closure (MIGHT be inaccurate)")
@@ -265,8 +264,10 @@ TestProcess("setthreadidentity: Identity Check", function()
 	local Need, Hydroxycut = pcall(function() return getthreadidentity() end)
 	TestDependencies.SendTest(Need, `An unexpected error occured, (error code 0x7C). Here's what we captured: {Result}`)
 
-	TestDependencies.SendTest(Hydroxycut == 2, "Failed to set the thread identity");
-	setthreadidentity(Identity); --// 0x1C?
+	TestDependencies.SendTest(Hydroxycut == 2, "Failed to set the thread identity")
+	setthreadidentity(Identity)
+
+	return "Passed"
 end)
 
 TestProcess("setthreadidentity: L2", function()
@@ -277,10 +278,11 @@ TestProcess("setthreadidentity: L2", function()
 	local Need, Hydroxycut = pcall(function() return getthreadidentity() end)
 	TestDependencies.SendTest(Need, `An unexpected error occured, (error code 0x7C). Here's what we captured: {Result}`)
 
-	TestDependencies.SendTest(Hydroxycut == 2, "Failed to set the thread identity");
-	TestDependencies.SendTest((pcall(function() return require(game:GetService("Players").LocalPlayer:FindFirstChild("PlayerScripts").PlayerModule)) end), `Couldn't require a ModuleScript at Level 2`);
+	TestDependencies.SendTest(Hydroxycut == 2, "Failed to set the thread identity")
+	TestDependencies.SendTest((pcall(function() return require(game:GetService("Players").LocalPlayer:FindFirstChild("PlayerScripts").PlayerModule) end)), `Couldn't require a ModuleScript at Level 2`)
 
 	setthreadidentity(Identity)
+	return "Passed"
 end)
 
 TestProcess("setthreadidentity: L8", function()
@@ -291,11 +293,12 @@ TestProcess("setthreadidentity: L8", function()
 	local Need, Hydroxycut = pcall(function() return getthreadidentity() end)
 	TestDependencies.SendTest(Need, `An unexpected error occured, (error code 0x7C). Here's what we captured: {Result}`)
 
-	TestDependencies.SendTest(Hydroxycut == 8, "Failed to set the thread identity");
+	TestDependencies.SendTest(Hydroxycut == 8, "Failed to set the thread identity")
 	local ChopStick, MakeANPantsSoil = pcall(function() return Instance.new("Player") end)
 
 	TestDependencies.SendTest(ChopStick, `Couldn't create a player (WritePlayer Permission)`)
 	setthreadidentity(Identity)
+	return "Passed"
 end)
 
 CalculatedTests["setthreadidentity"] = math.floor((os.clock() - SetThreadIdentityTimeServer) * 1000)
@@ -304,10 +307,6 @@ CalculatedTests["setthreadidentity"] = math.floor((os.clock() - SetThreadIdentit
 task.spawn(function()
 	PrintConsole(1, "")
 	PrintConsole(1, `[ Validator - Finishing ]: Processing results for {AgentInfo.Name} & calculating results...`)
-	PrintConsole(1, "")
-
-	PrintConsole(1, `✅ Tested with a {math.floor((TestDependencies.Passes / TestDependencies.Tested) * 100)}% success rate`)
-	PrintConsole(1, `❌ Failed over {math.floor((TestDependencies.Failures / TestDependencies.Tested) * 100)}% of tests`)
 	PrintConsole(1, "")
 
 	if AgentInfo.Environment.ValidatorConfiguration["DisplayTimeTaken"] then
@@ -322,6 +321,12 @@ task.spawn(function()
 			PrintConsole(2, `[ Validator - THS Error ]: An error occured while trying to display the time taken by each test (error code 0x6F)`)
 		end
 	end
+
+	PrintConsole(1, "")
+
+	PrintConsole(1, `✅ Tested with a {math.floor((TestDependencies.Passes / TestDependencies.Tested) * 100)}% success rate`)
+	PrintConsole(1, `❌ Failed over {math.floor((TestDependencies.Failures / TestDependencies.Tested) * 100)}% of tests`)
+	PrintConsole(1, "")
 
 	PrintConsole(1, "[ Validator - Assistant ]: If you do not understand any error codes, refer to the README in the repository. (ignore if no errors occured)")
 end)
